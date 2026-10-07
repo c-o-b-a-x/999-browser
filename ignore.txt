@@ -1,0 +1,40 @@
+f you want to host your remote LLM via a domain you own (e.g., ://yourdomain.com), you can definitely do that. Hosting via a domain gives you a clean, professional endpoint, but it requires handling DNS, SSL certificates, and security.
+The absolute easiest and most secure way to do this with your own domain is by combining it with a Cloudflare Tunnel. It avoids opening any ports on your router, automatically handles HTTPS/SSL certificates, and keeps your home IP hidden.
+
+Step 1: Set Up a Reverse Tunnel to Your Domain (Recommended)
+
+Instead of port forwarding (which exposes your home network to the public internet), use Cloudflare Tunnels:
+1. Point your domain’s nameservers to Cloudflare (Free tier works perfectly).
+2. Install the Cloudflare Tunnel daemon (cloudflared) on your host PC.
+3. Route a subdomain to your local LLM engine. For example, if you use LM Studio on port 1234 or Ollama on 11434:bash
+cloudflared tunnel route dns <TUNNEL-NAME> ://yourdomain.com
+cloudflared tunnel run --url http://localhost:1234 <TUNNEL-NAME>
+Use code with caution.
+Cloudflare will automatically map https://yourdomain.com directly to your local PC securely.
+(Alternative: If you prefer strict self-hosting without Cloudflare, you must open a port on your home router, use a Dynamic DNS client to track your home IP, and use a reverse proxy like Nginx or Caddy to manage an SSL certificate via Let's Encrypt).
+
+Step 2: Add API Key / Password Protection (Crucial)
+
+Because a domain makes your LLM publicly accessible on the web, anyone who finds your URL could drain your computer's GPU resources. You must protect it.
+• If using LM Studio (v0.4.1+): Enable the local server, check the authentication settings, and set a custom API Key/Bearer token.
+• If using Ollama: Ollama doesn't have native API key auth. You should place it behind an auth layer. If you used the Cloudflare route above, you can turn on Cloudflare Access / Zero Trust to require an authorization header or email OTP before traffic is allowed through.
+
+Step 3: Configure Claude Code
+
+On whatever network or laptop you are traveling with, open your terminal and point Claude Code to your new domain domain:
+bash
+# Point to your custom domain
+export ANTHROPIC_BASE_URL="https://yourdomain.com"
+
+# Provide the API key or password you set up on your host server
+export ANTHROPIC_AUTH_TOKEN="your-secret-password-or-api-key"
+
+# Map the default Claude models to whatever model you are running on your home PC
+export ANTHROPIC_DEFAULT_SONNET_MODEL="qwen2.5-coder:14b"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="qwen2.5-coder:7b"
+
+# Launch Claude Code
+claude
+Use code with caution.
+(Note: Ensure your local server is using an Anthropic-compatible format, which modern versions of LM Studio and frameworks like LiteLLM support natively).
+Would you prefer to use Cloudflare Tunnels to connect your domain, or would you rather look at a completely self-hosted option using a reverse proxy like Caddy?

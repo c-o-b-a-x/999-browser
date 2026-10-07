@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src http: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quiet Browser</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="browser-chrome">
+      <div class="tab-row">
+        <div id="tabs" class="tabs" role="tablist" aria-label="Browser tabs"></div>
+        <button id="new-tab" class="icon-button new-tab" type="button" aria-label="New tab" title="New tab">+</button>
+        <div class="window-actions">
+          <button id="library-button" class="icon-button" type="button" aria-label="History and bookmarks" title="History and bookmarks">▤</button>
+          <button id="settings-button" class="icon-button settings-button" type="button" aria-label="Settings" title="Settings">⚙</button>
+        </div>
+      </div>
+      <form id="address-form" class="toolbar">
+        <button id="back" class="icon-button" type="button" aria-label="Go back" title="Back">←</button>
+        <button id="forward" class="icon-button" type="button" aria-label="Go forward" title="Forward">→</button>
+        <button id="reload" class="icon-button" type="button" aria-label="Reload page" title="Reload">↻</button>
+        <input id="address" type="text" spellcheck="false" autocomplete="off" aria-label="Address or search" placeholder="Search privately or enter an address">
+        <button id="bookmark" class="icon-button" type="button" aria-label="Bookmark this page" title="Bookmark this page">☆</button>
+        <button id="go" class="go-button" type="submit">Go</button>
+      </form>
+    </header>
+
+    <nav id="bookmarks-bar" class="bookmarks-bar" aria-label="Bookmarks"></nav>
+    <div id="navigation-error" class="navigation-error hidden" role="alert">
+      <span id="navigation-error-message"></span>
+      <button id="retry-navigation" class="secondary-button" type="button">Retry</button>
+      <button id="dismiss-navigation-error" class="icon-button" type="button" aria-label="Dismiss error">×</button>
+    </div>
+
+    <main id="view-container" aria-label="Browser content"></main>
+
+    <template id="start-page-template">
+      <section class="start-page">
+        <div class="start-content">
+          <div class="brand-mark" aria-hidden="true">◈</div>
+          <p class="eyebrow">A quieter place to browse</p>
+          <h1>Browse on your terms.</h1>
+          <p class="intro">No accounts. No analytics. Your browsing data stays on this device.</p>
+          <form class="start-search">
+            <input type="text" aria-label="Search the web" placeholder="Search the web or enter an address" autocomplete="off">
+            <button type="submit">Search</button>
+          </form>
+          <p class="privacy-note">Tracker blocking and privacy signals are on. Some sites may not work as expected.</p>
+        </div>
+      </section>
+    </template>
+
+    <dialog id="library-dialog" class="panel-dialog">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Your device only</p><h2>History &amp; bookmarks</h2></div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="library-columns">
+        <section><h3>Bookmarks</h3><ul id="bookmark-list" class="item-list"></ul></section>
+        <section><h3>Recent history</h3><ul id="history-list" class="item-list"></ul></section>
+      </div>
+    </dialog>
+
+    <dialog id="settings-dialog" class="panel-dialog settings-dialog">
+      <div class="dialog-header settings-header">
+        <div><p class="eyebrow">Quiet Browser</p><h2>Settings</h2></div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close settings">×</button>
+      </div>
+      <div class="settings-layout">
+        <nav class="settings-menu" aria-label="Settings sections">
+          <button class="settings-menu-item active" type="button" data-settings-section="general" aria-current="page">General</button>
+          <button class="settings-menu-item" type="button" data-settings-section="appearance">Appearance</button>
+          <button class="settings-menu-item" type="button" data-settings-section="privacy">Privacy &amp; security</button>
+          <button class="settings-menu-item" type="button" data-settings-section="passwords">Passwords</button>
+        </nav>
+        <div class="settings-content">
+          <section class="settings-section active" data-settings-panel="general">
+            <h3>General</h3>
+            <p class="section-description">Browser preferences and useful keyboard shortcuts.</p>
+            <div class="settings-card">
+              <h4>Keyboard shortcuts</h4>
+              <dl class="shortcut-list">
+                <div><dt>Focus address bar</dt><dd>Ctrl + L</dd></div>
+                <div><dt>New / close tab</dt><dd>Ctrl + T / Ctrl + W</dd></div>
+                <div><dt>Next / previous tab</dt><dd>Ctrl + Tab / Ctrl + Shift + Tab</dd></div>
+                <div><dt>Bookmark this page</dt><dd>Ctrl + D</dd></div>
+                <div><dt>Show / hide bookmarks bar</dt><dd>Ctrl + Shift + B</dd></div>
+                <div><dt>History and bookmarks</dt><dd>Ctrl + Shift + O</dd></div>
+                <div><dt>Reload page</dt><dd>Ctrl + R or F5</dd></div>
+                <div><dt>Back / forward</dt><dd>Alt + ← / →</dd></div>
+              </dl>
+            </div>
+          </section>
+
+          <section class="settings-section" data-settings-panel="appearance" hidden>
+            <h3>Appearance</h3>
+            <p class="section-description">Customize the browser interface. Changes preview immediately and are saved on request.</p>
+            <form id="theme-form">
+              <div class="theme-grid">
+                <label class="theme-control">Window background<input name="background" type="color"></label>
+                <label class="theme-control">Panels &amp; tabs<input name="surface" type="color"></label>
+                <label class="theme-control">Accent &amp; buttons<input name="accent" type="color"></label>
+                <label class="theme-control">Text<input name="text" type="color"></label>
+                <label class="theme-control">Muted text<input name="muted" type="color"></label>
+                <label class="theme-control">Interface font<select name="fontFamily"><option>Segoe UI</option><option>Arial</option><option>Georgia</option><option>Consolas</option><option>Tahoma</option></select></label>
+                <label class="theme-control">Control color scheme<select name="colorScheme"><option value="dark">Dark controls</option><option value="light">Light controls</option></select></label>
+                <label class="theme-control">Text size <output id="theme-font-size">14 px</output><input name="fontSize" type="range" min="12" max="20" step="1"></label>
+                <label class="theme-control">Corner roundness <output id="theme-corner-radius">9 px</output><input name="cornerRadius" type="range" min="0" max="24" step="1"></label>
+              </div>
+              <div class="dialog-actions">
+                <button id="theme-reset" class="secondary-button" type="button">Reset defaults</button>
+                <button class="primary-button" type="submit">Save theme</button>
+              </div>
+              <p id="theme-status" class="status-message" aria-live="polite"></p>
+            </form>
+          </section>
+
+          <section class="settings-section" data-settings-panel="privacy" hidden>
+            <h3>Privacy &amp; security</h3>
+            <p class="section-description">Choose how Quiet Browser handles requests and local browsing data.</p>
+            <ul class="privacy-list">
+              <li><span class="status-dot"></span><span><strong>Ad blocking</strong><small>Blocks common ad requests using local filter rules.</small></span><button id="adblock-toggle" class="secondary-button toggle-button" type="button" aria-pressed="true">On</button></li>
+              <li><span class="status-dot"></span><span><strong>Known tracker blocking</strong><small>Blocks requests to a built-in list of common tracking and ad domains.</small></span><b>On</b></li>
+              <li><span class="status-dot"></span><span><strong>Privacy signals</strong><small>Sends Do Not Track and Global Privacy Control signals.</small></span><b>On</b></li>
+              <li><span class="status-dot"></span><span><strong>Site permissions</strong><small>Location, camera, microphone, and notification requests are denied.</small></span><b>Denied</b></li>
+              <li><span class="status-dot"></span><span><strong>Telemetry</strong><small>The app does not include analytics or account syncing.</small></span><b>None</b></li>
+            </ul>
+            <div class="clear-data">
+              <div><strong>Clear browsing data</strong><small>Removes history, cookies, site storage, and cached files from this device.</small></div>
+              <button id="clear-data" class="secondary-button" type="button">Clear data</button>
+            </div>
+            <div class="clear-data log-folder">
+              <div><strong>Diagnostic logs</strong><small>Detailed app errors and lifecycle events are saved locally. URLs are redacted to their origin.</small></div>
+              <button id="open-logs" class="secondary-button" type="button">Open logs folder</button>
+            </div>
+            <p id="privacy-status" class="status-message" aria-live="polite"></p>
+            <p class="privacy-disclaimer">Tracker lists cannot catch every tracker. Sites you visit still receive your connection details, and search queries go to DuckDuckGo.</p>
+          </section>
+
+          <section class="settings-section" data-settings-panel="passwords" hidden>
+            <h3>Passwords</h3>
+            <p class="section-description">Encrypted with your operating system's secure storage. Autofill always requires confirmation.</p>
+            <ul id="password-list" class="item-list password-list"></ul>
+            <p id="password-manager-status" class="status-message" aria-live="polite"></p>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="password-prompt-dialog" class="panel-dialog compact-dialog">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Encrypted on this device</p><h2>Save this password?</h2></div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close">×</button>
+      </div>
+      <p id="password-save-origin" class="site-origin"></p>
+      <label class="field-label" for="password-save-username">Username</label>
+      <input id="password-save-username" class="dialog-input" type="text" autocomplete="off">
+      <div class="dialog-actions">
+        <button id="password-save-never" class="secondary-button" type="button">Not now</button>
+        <button id="password-save-confirm" class="primary-button" type="button">Save password</button>
+      </div>
+      <p id="password-save-status" class="status-message" aria-live="polite"></p>
+    </dialog>
+
+    <dialog id="autofill-dialog" class="panel-dialog compact-dialog">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Saved on this device</p><h2>Fill a saved password?</h2></div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close">×</button>
+      </div>
+      <p id="autofill-origin" class="site-origin"></p>
+      <label class="field-label" for="autofill-account">Account</label>
+      <select id="autofill-account" class="dialog-input"></select>
+      <div class="dialog-actions">
+        <button class="secondary-button close-dialog" type="button">Not now</button>
+        <button id="autofill-confirm" class="primary-button" type="button">Fill credentials</button>
+      </div>
+      <p id="autofill-status" class="status-message" aria-live="polite"></p>
+    </dialog>
+
+    <script src="privacy.js"></script>
+    <script src="theme.js"></script>
+    <script src="navigation-errors.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>
