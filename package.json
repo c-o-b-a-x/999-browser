@@ -2,7 +2,7 @@
   "name": "quiet-browser",
   "version": "1.0.0",
   "private": true,
-  "description": "A small desktop browser with privacy-first defaults",
+  "description": "999 - a small desktop browser with privacy-first defaults",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

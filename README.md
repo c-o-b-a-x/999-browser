@@ -1,6 +1,6 @@
-# Quiet Browser
+# 999
 
-A small Electron desktop browser focused on keeping browsing data on your device.
+999 is a small Electron desktop browser focused on keeping browsing data on your device.
 
 ## Run
 

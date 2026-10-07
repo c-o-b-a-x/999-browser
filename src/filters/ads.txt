@@ -1,4 +1,4 @@
-! Quiet Browser original bundled rules; limited ABP-compatible syntax.
+! 999 original bundled rules; limited ABP-compatible syntax.
 ||adservice.google.com^
 ||doubleclick.net^
 ||googlesyndication.com^

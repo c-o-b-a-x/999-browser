@@ -338,7 +338,7 @@ function createWindow() {
     minWidth: 720,
     minHeight: 480,
     backgroundColor: "#101418",
-    title: "Quiet Browser",
+    title: "999",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
