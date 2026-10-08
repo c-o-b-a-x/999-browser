@@ -1,6 +1,6 @@
-# 999
+# no peepers
 
-999 is a small Electron desktop browser focused on keeping browsing data on your device.
+no peepers is a small Electron desktop browser focused on keeping browsing data on your device.
 
 ## Run
 
@@ -14,8 +14,13 @@
 - History, bookmarks, and cookies are stored locally; history and cookies can be cleared in Privacy settings.
 - Ad blocking uses a bundled local filter list plus common tracker-domain blocking. The built-in rules support common EasyList-style host/path patterns, resource types, domain scopes, and exceptions; this is not the complete EasyList format. No external filter service is contacted. Blocking is not comprehensive and can affect some sites.
 - Browser configuration is organized under the Settings button in the top toolbar, with separate General, Appearance, Privacy & Security, and Passwords sections. History and bookmarks remain in their own library.
-- Saved passwords are encrypted using Electron's operating-system secure storage. The browser asks before saving or filling credentials, and only offers autofill for the exact HTTPS site that saved them (localhost is allowed for development). Manage saved logins in Settings → Passwords.
+- The Passwords manager requires a master password of at least 12 characters. Passwords remain hidden until individually revealed, and the manager locks when you leave its Settings section or close Settings. A user-chosen 4–6 digit recovery PIN can reset a forgotten master password; failed recovery attempts are throttled. The PIN is a recovery gate layered with OS secure storage, not a standalone encryption key.
+- Vault credentials are encrypted at rest with AES-256-GCM. A random vault key is wrapped separately by a master-password-derived key and by the operating system's secure storage. The OS-wrapped key keeps origin-checked, explicitly confirmed autofill available while the Passwords manager is locked. This means the master password protects manual access in the manager, not a compromised app or malware already running as your OS user. Existing OS-encrypted saved logins are migrated when the manager is first set up.
 - Settings → Appearance lets you adjust interface colors, font, control color scheme, text size, and corner roundness. Theme preferences are stored locally.
+- Settings → Appearance also offers opt-in forced page darkening, local custom cursor images for browser chrome and websites, and a local new-tab wallpaper. Cursor PNG files are limited to 128 × 128 pixels; wallpapers support PNG/JPEG. Imported images are copied into app-managed local storage.
+- Interface typing and click sounds have separate toggles and default to on. Typing sounds are limited to browser UI fields; website contents and password/recovery fields are never sampled for sounds. Effects are generated locally and no audio is sent or downloaded.
+- Settings → Appearance lets you show or hide each new-tab element independently: no peepers branding, headline, intro text, search bar, and privacy note. All are shown by default.
+- Browser actions provide accessible status feedback; page loading has a progress indicator, and keyboard focus/hover/pressed/disabled states are visibly styled. Reduced-motion preferences are respected.
 - Requests carry Do Not Track and Global Privacy Control signals. These are requests to websites, not technical enforcement.
 - Site permission requests (including location, camera, microphone, and notifications) are denied.
 - Search terms entered without an address are sent to DuckDuckGo. Visited websites still receive the connection information needed to serve their pages.

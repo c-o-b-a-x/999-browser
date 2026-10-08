@@ -47,12 +47,27 @@ contextBridge.exposeInMainWorld("quietBrowser", {
   removeBookmark: (url) => ipcRenderer.invoke("data:remove-bookmark", url),
   clearBrowsingData: () => ipcRenderer.invoke("data:clear"),
   openLogsFolder: () => ipcRenderer.invoke("diagnostic:open-folder"),
+  getPasswordManagerStatus: () => ipcRenderer.invoke("password:manager-status"),
+  setupPasswordManager: (credentials) =>
+    ipcRenderer.invoke("password:manager-setup", credentials),
+  unlockPasswordManager: (password) =>
+    ipcRenderer.invoke("password:manager-unlock", password),
+  recoverPasswordManager: (recovery) =>
+    ipcRenderer.invoke("password:manager-recover", recovery),
+  lockPasswordManager: () => ipcRenderer.invoke("password:manager-lock"),
+  listManagedPasswords: () => ipcRenderer.invoke("password:manager-list"),
+  revealManagedPassword: (id) => ipcRenderer.invoke("password:manager-reveal", id),
   listPasswords: (request) => ipcRenderer.invoke("password:list", request),
   savePassword: (candidate) => ipcRenderer.invoke("password:save", candidate),
   retrievePassword: (request) => ipcRenderer.invoke("password:retrieve", request),
   removePassword: (id) => ipcRenderer.invoke("password:remove", id),
   loadSettings: () => ipcRenderer.invoke("settings:load"),
   saveTheme: (theme) => ipcRenderer.invoke("settings:save-theme", theme),
+  saveQolSettings: (settings) => ipcRenderer.invoke("settings:save-qol", settings),
+  importAppearanceAsset: (kind) =>
+    ipcRenderer.invoke("settings:import-appearance-asset", kind),
+  removeAppearanceAsset: (kind) =>
+    ipcRenderer.invoke("settings:remove-appearance-asset", kind),
   setAdBlocking: (enabled) => ipcRenderer.invoke("settings:set-adblocking", enabled),
   onPasswordSavePrompt: (callback) => subscribe("password:save-prompt", callback),
   log

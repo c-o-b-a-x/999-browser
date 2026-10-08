@@ -7,8 +7,8 @@
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src http: https:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     >
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>999</title>
-    <link rel="icon" type="image/svg+xml" href="999-mark.svg">
+    <title>no peepers</title>
+    <link rel="icon" type="image/png" href="../peepers-icon.png">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -32,6 +32,9 @@
     </header>
 
     <nav id="bookmarks-bar" class="bookmarks-bar" aria-label="Bookmarks"></nav>
+    <div id="page-progress" class="page-progress hidden" role="progressbar" aria-label="Page loading">
+      <span></span>
+    </div>
     <div id="navigation-error" class="navigation-error hidden" role="alert">
       <span id="navigation-error-message"></span>
       <button id="retry-navigation" class="secondary-button" type="button">Retry</button>
@@ -39,19 +42,22 @@
     </div>
 
     <main id="view-container" aria-label="Browser content"></main>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
 
     <template id="start-page-template">
       <section class="start-page">
         <div class="start-content">
-          <img class="brand-mark" src="999-mark.svg" alt="999">
-          <p class="eyebrow">999 · Private by default</p>
-          <h1>Browse on your terms.</h1>
-          <p class="intro">No accounts. No analytics. Your browsing data stays on this device.</p>
-          <form class="start-search">
+          <div data-start-feature="branding">
+            <img class="brand-mark" src="../peepers-icon.png" alt="no peepers">
+            <p class="eyebrow">no peepers · Private by default</p>
+          </div>
+          <h1 data-start-feature="headline">Browse on your terms.</h1>
+          <p class="intro" data-start-feature="intro">No accounts. No analytics. Your browsing data stays on this device.</p>
+          <form class="start-search" data-start-feature="search">
             <input type="text" aria-label="Search the web" placeholder="Search the web or enter an address" autocomplete="off">
             <button type="submit">Search</button>
           </form>
-          <p class="privacy-note">Tracker blocking and privacy signals are on. Some sites may not work as expected.</p>
+          <p class="privacy-note" data-start-feature="privacy">Tracker blocking and privacy signals are on. Some sites may not work as expected.</p>
         </div>
       </section>
     </template>
@@ -69,7 +75,7 @@
 
     <dialog id="settings-dialog" class="panel-dialog settings-dialog">
       <div class="dialog-header settings-header">
-        <div><p class="eyebrow">999</p><h2>Settings</h2></div>
+        <div><p class="eyebrow">no peepers</p><h2>Settings</h2></div>
         <button class="icon-button close-dialog" type="button" aria-label="Close settings">×</button>
       </div>
       <div class="settings-layout">
@@ -119,11 +125,71 @@
               </div>
               <p id="theme-status" class="status-message" aria-live="polite"></p>
             </form>
+            <form id="qol-form" class="qol-form">
+              <h4>Browsing experience</h4>
+              <label class="preference-toggle">
+                <input id="force-dark-mode" name="forceDarkMode" type="checkbox">
+                <span><strong>Force dark mode on websites</strong><small>Applies a dark treatment to pages that do not provide one. Off by default.</small></span>
+              </label>
+              <fieldset class="asset-setting">
+                <legend>Custom cursor</legend>
+                <p class="section-description">Use a PNG cursor image in the browser and on websites (maximum 128 × 128 pixels).</p>
+                <span id="cursor-asset-name" class="asset-name">Default cursor</span>
+                <div class="dialog-actions">
+                  <button id="choose-cursor" class="secondary-button" type="button">Choose cursor image</button>
+                  <button id="remove-cursor" class="secondary-button" type="button">Use default</button>
+                </div>
+              </fieldset>
+              <fieldset class="asset-setting">
+                <legend>New-tab wallpaper</legend>
+                <p class="section-description">Set a local PNG or JPEG image as the new-tab background.</p>
+                <span id="wallpaper-asset-name" class="asset-name">Default background</span>
+                <div class="dialog-actions">
+                  <button id="choose-wallpaper" class="secondary-button" type="button">Choose wallpaper</button>
+                  <button id="remove-wallpaper" class="secondary-button" type="button">Use default</button>
+                </div>
+              </fieldset>
+              <h4>Interface sounds</h4>
+              <label class="preference-toggle">
+                <input id="typing-sounds" name="typingSounds" type="checkbox">
+                <span><strong>Typing sounds</strong><small>Only for browser-interface inputs, never website or password fields.</small></span>
+              </label>
+              <label class="preference-toggle">
+                <input id="click-sounds" name="clickSounds" type="checkbox">
+                <span><strong>Click sounds</strong><small>Play a subtle local sound for browser-interface clicks.</small></span>
+              </label>
+              <h4>New-tab content</h4>
+              <p class="section-description">Choose which elements appear on the new-tab page. All are shown by default.</p>
+              <label class="preference-toggle">
+                <input id="showBranding" name="showBranding" type="checkbox" checked>
+                <span><strong>no peepers branding</strong><small>Show the logo and “Private by default” label.</small></span>
+              </label>
+              <label class="preference-toggle">
+                <input id="showHeadline" name="showHeadline" type="checkbox" checked>
+                <span><strong>Headline</strong><small>Show “Browse on your terms.”</small></span>
+              </label>
+              <label class="preference-toggle">
+                <input id="showIntro" name="showIntro" type="checkbox" checked>
+                <span><strong>Intro text</strong><small>Show the note about accounts, analytics, and local data.</small></span>
+              </label>
+              <label class="preference-toggle">
+                <input id="showSearchBar" name="showSearchBar" type="checkbox" checked>
+                <span><strong>Search bar</strong><small>Show the new-tab web search field.</small></span>
+              </label>
+              <label class="preference-toggle">
+                <input id="showPrivacyNote" name="showPrivacyNote" type="checkbox" checked>
+                <span><strong>Privacy note</strong><small>Show the tracker-blocking and privacy-signals note.</small></span>
+              </label>
+              <div class="dialog-actions">
+                <button id="qol-save" class="primary-button" type="submit">Save preferences</button>
+              </div>
+              <p id="qol-status" class="status-message" aria-live="polite"></p>
+            </form>
           </section>
 
           <section class="settings-section" data-settings-panel="privacy" hidden>
             <h3>Privacy &amp; security</h3>
-            <p class="section-description">Choose how 999 handles requests and local browsing data.</p>
+            <p class="section-description">Choose how no peepers handles requests and local browsing data.</p>
             <ul class="privacy-list">
               <li><span class="status-dot"></span><span><strong>Ad blocking</strong><small>Blocks common ad requests using local filter rules.</small></span><button id="adblock-toggle" class="secondary-button toggle-button" type="button" aria-pressed="true">On</button></li>
               <li><span class="status-dot"></span><span><strong>Known tracker blocking</strong><small>Blocks requests to a built-in list of common tracking and ad domains.</small></span><b>On</b></li>
@@ -145,8 +211,56 @@
 
           <section class="settings-section" data-settings-panel="passwords" hidden>
             <h3>Passwords</h3>
-            <p class="section-description">Encrypted with your operating system's secure storage. Autofill always requires confirmation.</p>
-            <ul id="password-list" class="item-list password-list"></ul>
+            <p class="section-description">Passwords stay encrypted on this device. Autofill always requires confirmation.</p>
+            <div id="password-manager-setup" class="password-gate" hidden>
+              <h4>Set up the password manager</h4>
+              <p class="section-description">Create a master password and a recovery PIN. The PIN can restore manager access if you forget the master password.</p>
+              <form id="password-manager-setup-form">
+                <label class="field-label" for="master-password-new">Master password (12 characters minimum)</label>
+                <input id="master-password-new" class="dialog-input" type="password" autocomplete="new-password" required minlength="12">
+                <label class="field-label" for="master-password-confirm">Confirm master password</label>
+                <input id="master-password-confirm" class="dialog-input" type="password" autocomplete="new-password" required minlength="12">
+                <label class="field-label" for="recovery-pin-new">Recovery PIN (4–6 digits)</label>
+                <input id="recovery-pin-new" class="dialog-input" type="password" inputmode="numeric" pattern="[0-9]{4,6}" autocomplete="off" required>
+                <label class="field-label" for="recovery-pin-confirm">Confirm recovery PIN</label>
+                <input id="recovery-pin-confirm" class="dialog-input" type="password" inputmode="numeric" pattern="[0-9]{4,6}" autocomplete="off" required>
+                <div class="dialog-actions"><button class="primary-button" type="submit">Set up password manager</button></div>
+              </form>
+            </div>
+            <div id="password-manager-unlock" class="password-gate" hidden>
+              <h4>Unlock saved passwords</h4>
+              <form id="password-manager-unlock-form">
+                <label class="field-label" for="master-password-unlock">Master password</label>
+                <input id="master-password-unlock" class="dialog-input" type="password" autocomplete="current-password" required>
+                <div class="dialog-actions">
+                  <button class="primary-button" type="submit">Unlock</button>
+                  <button id="password-manager-show-recovery" class="secondary-button" type="button">Forgot master password?</button>
+                </div>
+              </form>
+            </div>
+            <div id="password-manager-recovery" class="password-gate" hidden>
+              <h4>Recover password manager</h4>
+              <p class="section-description">Enter your recovery PIN, then choose a new master password.</p>
+              <form id="password-manager-recovery-form">
+                <label class="field-label" for="recovery-pin-unlock">Recovery PIN</label>
+                <input id="recovery-pin-unlock" class="dialog-input" type="password" inputmode="numeric" pattern="[0-9]{4,6}" autocomplete="off" required>
+                <label class="field-label" for="master-password-reset">New master password (12 characters minimum)</label>
+                <input id="master-password-reset" class="dialog-input" type="password" autocomplete="new-password" required minlength="12">
+                <label class="field-label" for="master-password-reset-confirm">Confirm new master password</label>
+                <input id="master-password-reset-confirm" class="dialog-input" type="password" autocomplete="new-password" required minlength="12">
+                <div class="dialog-actions">
+                  <button class="secondary-button" id="password-manager-cancel-recovery" type="button">Back</button>
+                  <button class="primary-button" type="submit">Reset master password</button>
+                </div>
+              </form>
+            </div>
+            <div id="password-manager-content" hidden>
+              <div class="password-manager-toolbar">
+                <p class="section-description">Saved values are hidden until you reveal them. Lock the manager when finished.</p>
+                <button id="password-manager-lock" class="secondary-button" type="button">Lock</button>
+              </div>
+              <ul id="password-list" class="item-list password-list"></ul>
+            </div>
             <p id="password-manager-status" class="status-message" aria-live="polite"></p>
           </section>
         </div>
@@ -186,6 +300,7 @@
     <script src="privacy.js"></script>
     <script src="theme.js"></script>
     <script src="navigation-errors.js"></script>
+    <script src="qol-settings.js"></script>
     <script src="renderer.js"></script>
   </body>
 </html>
