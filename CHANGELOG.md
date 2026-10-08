@@ -14,3 +14,6 @@ browser's What's New dialog when changelog updates are enabled.
   disabled in the dialog or re-enabled from General settings.
 - Added this changelog and a GitHub-backed update check that shows unseen notes
   on the next launch, with an opt-out setting.
+
+
+TEST
