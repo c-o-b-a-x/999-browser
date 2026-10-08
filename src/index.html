@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" href="../peepers-icon.png">
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body class="initializing">
     <header class="browser-chrome">
       <div class="tab-row">
         <div id="tabs" class="tabs" role="tablist" aria-label="Browser tabs"></div>
@@ -43,6 +43,85 @@
 
     <main id="view-container" aria-label="Browser content"></main>
     <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <dialog id="onboarding-dialog" class="panel-dialog onboarding-dialog">
+      <div class="dialog-header onboarding-header">
+        <div>
+          <p class="eyebrow">Welcome to no peepers</p>
+          <h2 id="onboarding-title">Your browser, your way</h2>
+        </div>
+      </div>
+      <div class="onboarding-progress" aria-label="Setup progress">
+        <span id="onboarding-step-count">Step 1 of 5</span>
+        <div class="onboarding-progress-track"><span id="onboarding-progress-fill"></span></div>
+      </div>
+      <section class="onboarding-step" data-onboarding-step="0">
+        <h3>A quick tour</h3>
+        <p>Here is where to find the browser’s everyday tools. You can change these choices later in Settings.</p>
+        <div class="onboarding-tip"><strong>Privacy first</strong><span>Browsing data is kept on this device. Tracker blocking and privacy signals are enabled by default; they reduce tracking but do not make you anonymous.</span></div>
+      </section>
+      <section class="onboarding-step" data-onboarding-step="1" hidden>
+        <h3>Tabs and navigation</h3>
+        <p>The row at the top holds your tabs. Use <kbd>Ctrl</kbd> + <kbd>T</kbd> to open one and <kbd>Ctrl</kbd> + <kbd>W</kbd> to close it.</p>
+        <div class="onboarding-tip"><strong>Move around</strong><span>Use the back, forward, and reload buttons beside the address bar. Press <kbd>Ctrl</kbd> + <kbd>L</kbd> to focus it.</span></div>
+      </section>
+      <section class="onboarding-step" data-onboarding-step="2" hidden>
+        <h3>Search, history, and bookmarks</h3>
+        <p>Search from the homepage or type a search or website address into the toolbar. Searches go to DuckDuckGo.</p>
+        <div class="onboarding-tip"><strong>Your library</strong><span>Use the library button near Settings to find bookmarks and recent history. Save a page with the star or press <kbd>Ctrl</kbd> + <kbd>D</kbd>.</span></div>
+      </section>
+      <section class="onboarding-step" data-onboarding-step="3" hidden>
+        <h3>Settings and privacy</h3>
+        <p>The gear button opens the main Settings area. Its sections organize General, Appearance, Privacy &amp; security, and Passwords.</p>
+        <div class="onboarding-tip"><strong>Make it yours</strong><span>Appearance includes themes and homepage controls. Privacy &amp; security includes ad blocking, data clearing, and local diagnostic logs.</span></div>
+      </section>
+      <section class="onboarding-step" data-onboarding-step="4" hidden>
+        <h3>Set up your password manager</h3>
+        <p>Choose a strong master password (at least 12 characters) and a 4–6 digit recovery PIN. The PIN helps recover access if you forget the master password. Keep both somewhere safe.</p>
+        <p class="onboarding-security-note">Passwords are encrypted on this device. The master password protects the Passwords manager; confirmed autofill remains available through OS secure storage while the manager is locked.</p>
+        <div id="onboarding-password-configured" class="onboarding-tip" hidden>
+          <strong>Password manager already set up</strong>
+          <span>You can manage saved passwords any time in Settings → Passwords.</span>
+        </div>
+        <form id="onboarding-password-form">
+          <label class="field-label" for="onboarding-master-password">Master password</label>
+          <input id="onboarding-master-password" class="dialog-input" type="password" autocomplete="new-password" required minlength="12">
+          <label class="field-label" for="onboarding-master-confirm">Confirm master password</label>
+          <input id="onboarding-master-confirm" class="dialog-input" type="password" autocomplete="new-password" required minlength="12">
+          <label class="field-label" for="onboarding-recovery-pin">Recovery PIN (4–6 digits)</label>
+          <input id="onboarding-recovery-pin" class="dialog-input" type="password" inputmode="numeric" pattern="[0-9]{4,6}" autocomplete="off" required>
+          <label class="field-label" for="onboarding-recovery-confirm">Confirm recovery PIN</label>
+          <input id="onboarding-recovery-confirm" class="dialog-input" type="password" inputmode="numeric" pattern="[0-9]{4,6}" autocomplete="off" required>
+          <div class="dialog-actions">
+            <button class="primary-button" type="submit">Create password manager</button>
+          </div>
+        </form>
+        <p id="onboarding-status" class="status-message" aria-live="polite"></p>
+      </section>
+      <div class="dialog-actions onboarding-actions">
+        <button id="onboarding-skip" class="secondary-button" type="button">Skip tour</button>
+        <span class="onboarding-spacer"></span>
+        <button id="onboarding-back" class="secondary-button" type="button" hidden>Back</button>
+        <button id="onboarding-next" class="primary-button" type="button">Next</button>
+        <button id="onboarding-finish-later" class="primary-button" type="button" hidden>Finish setup later</button>
+      </div>
+    </dialog>
+
+    <dialog id="changelog-dialog" class="panel-dialog changelog-dialog">
+      <div class="dialog-header">
+        <div><p class="eyebrow">no peepers</p><h2>What’s new</h2></div>
+        <button id="changelog-close" class="icon-button" type="button" aria-label="Close update notes">×</button>
+      </div>
+      <p class="section-description">These notes were fetched from the project’s public GitHub repository.</p>
+      <pre id="changelog-content" class="changelog-content"></pre>
+      <label class="preference-toggle changelog-opt-out">
+        <input id="changelog-enabled" type="checkbox" checked>
+        <span><strong>Show changelog updates on startup</strong><small>Turn this off to stop checking GitHub and hide future update popups. Re-enable it in Settings → General.</small></span>
+      </label>
+      <div class="dialog-actions">
+        <button id="changelog-dismiss" class="primary-button" type="button">Close</button>
+      </div>
+    </dialog>
 
     <template id="start-page-template">
       <section class="start-page">
@@ -101,6 +180,13 @@
                 <div><dt>Reload page</dt><dd>Ctrl + R or F5</dd></div>
                 <div><dt>Back / forward</dt><dd>Alt + ← / →</dd></div>
               </dl>
+            </div>
+            <div class="settings-card updates-setting">
+              <h4>Changelog updates</h4>
+              <label class="preference-toggle">
+                <input id="changelog-updates-setting" type="checkbox" checked>
+                <span><strong>Show “What’s new” on startup</strong><small>Checks the project’s public GitHub changelog for changes. Disable this to stop update checks.</small></span>
+              </label>
             </div>
           </section>
 

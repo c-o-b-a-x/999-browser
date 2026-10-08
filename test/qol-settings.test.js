@@ -159,3 +159,24 @@ test("keeps hidden start-page features hidden when component styles set display"
   );
   assert.match(stylesheet, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/);
 });
+
+test("waits for saved preferences before revealing the first start page", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "src", "index.html"),
+    "utf8"
+  );
+  const stylesheet = fs.readFileSync(
+    path.join(__dirname, "..", "src", "styles.css"),
+    "utf8"
+  );
+  const renderer = fs.readFileSync(
+    path.join(__dirname, "..", "src", "renderer.js"),
+    "utf8"
+  );
+  assert.match(html, /<body class="initializing">/);
+  assert.match(stylesheet, /body\.initializing\s*\{\s*visibility:\s*hidden;\s*\}/);
+  assert.match(
+    renderer,
+    /async function startBrowser\(\)\s*\{\s*await initializeSettings\(\);\s*if \(firstRunRequired\) await prepareOnboarding\(\);\s*createTab\(\);\s*document\.body\.classList\.remove\("initializing"\);/
+  );
+});

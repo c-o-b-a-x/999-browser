@@ -6,6 +6,8 @@ const { isTrackerUrl } = require("./privacy");
 const { configureLogger, getLogDirectory, safeOrigin, writeLog } = require("./logger");
 const { createFilterEngine } = require("./adblock");
 const { createPasswordVault } = require("./password-vault");
+const { markFirstRunComplete, shouldShowFirstRun } = require("./first-run");
+const { createChangelogUpdates } = require("./changelog-updates");
 const { DEFAULT_THEME, mergeTheme, validateTheme } = require("./theme");
 const {
   DEFAULT_QOL_SETTINGS,
@@ -18,6 +20,9 @@ const BROWSER_PARTITION = "persist:quiet-browser";
 const MAX_HISTORY_ITEMS = 1000;
 const MAX_BOOKMARKS = 500;
 let storePath;
+let firstRunMarkerPath;
+let firstRunPending = false;
+let changelogUpdates;
 let mainWebContentsId = null;
 let mainWindow = null;
 let passwordVault;
@@ -287,29 +292,64 @@ function registerDataHandlers(browserSession) {
     return guest;
   }
 
-  ipcMain.on("password:save-candidate", (event, candidate) => {
+  ipcMain.on("password:capture-attempt", (event, details) => {
     const guest = guestContents.get(event.sender.id);
     if (
       !guest ||
       guest.isDestroyed() ||
       event.senderFrame !== guest.mainFrame
     ) return;
+    if (!details?.hasPassword) return;
+    writeLog("debug", "password.capture-attempt", {
+      origin: safeOrigin(guest.getURL()),
+      hasUsername: details.hasUsername === true,
+      inputCount: Number.isInteger(details.inputCount) ? details.inputCount : undefined
+    });
+  });
+
+  ipcMain.on("password:save-candidate", (event, candidate) => {
+    const guest = guestContents.get(event.sender.id);
+    if (
+      !guest ||
+      guest.isDestroyed() ||
+      event.senderFrame !== guest.mainFrame
+    ) {
+      writeLog("debug", "password.save-candidate-rejected", {
+        reason: "untrusted-frame"
+      });
+      return;
+    }
     let actualOrigin;
     try {
       actualOrigin = new URL(guest.getURL()).origin;
     } catch {
+      writeLog("debug", "password.save-candidate-rejected", {
+        reason: "invalid-current-url"
+      });
       return;
     }
-    if (
-      actualOrigin !== candidate?.origin ||
-      (!actualOrigin.startsWith("https://") && !/^http:\/\/localhost(?::\d+)?$/i.test(actualOrigin)) ||
+    let rejectionReason;
+    if (actualOrigin !== candidate?.origin) rejectionReason = "origin-mismatch";
+    else if (
+      !actualOrigin.startsWith("https://") &&
+      !/^http:\/\/localhost(?::\d+)?$/i.test(actualOrigin)
+    ) rejectionReason = "insecure-origin";
+    else if (
       typeof candidate.username !== "string" ||
       typeof candidate.password !== "string" ||
       !candidate.username ||
-      !candidate.password ||
-      !mainWindow ||
-      mainWindow.isDestroyed()
-    ) return;
+      !candidate.password
+    ) rejectionReason = "missing-credentials";
+    else if (!mainWindow || mainWindow.isDestroyed()) {
+      rejectionReason = "browser-window-unavailable";
+    }
+    if (rejectionReason) {
+      writeLog("debug", "password.save-candidate-rejected", {
+        reason: rejectionReason,
+        origin: safeOrigin(actualOrigin)
+      });
+      return;
+    }
     writeLog("info", "password.save-prompted", { origin: safeOrigin(actualOrigin) });
     mainWindow.webContents.send("password:save-prompt", {
       webContentsId: guest.id,
@@ -322,6 +362,40 @@ function registerDataHandlers(browserSession) {
   ipcMain.handle("password:manager-status", (event) => {
     requireMainWindow(event);
     return passwordVault.status();
+  });
+
+  ipcMain.handle("onboarding:complete", (event) => {
+    requireMainWindow(event);
+    markFirstRunComplete(firstRunMarkerPath);
+    firstRunPending = false;
+    writeLog("info", "onboarding.completed", {});
+    return true;
+  });
+
+  ipcMain.handle("updates:check-changelog", async (event) => {
+    requireMainWindow(event);
+    try {
+      const update = await changelogUpdates.check();
+      if (update) {
+        writeLog("info", "updates.changelog.available", { hash: update.hash });
+      }
+      return update;
+    } catch (error) {
+      writeLog("warn", "updates.changelog-check-failed", { error });
+      return null;
+    }
+  });
+
+  ipcMain.handle("updates:mark-changelog-seen", (event, hash) => {
+    requireMainWindow(event);
+    return changelogUpdates.markSeen(hash);
+  });
+
+  ipcMain.handle("updates:set-changelog-enabled", (event, enabled) => {
+    requireMainWindow(event);
+    const result = changelogUpdates.setEnabled(enabled);
+    writeLog("info", "updates.changelog-preference-changed", { enabled: result });
+    return result;
   });
 
   ipcMain.handle("password:manager-setup", async (event, credentials) => {
@@ -435,7 +509,9 @@ function registerDataHandlers(browserSession) {
       theme: store.theme,
       adBlocking: store.adBlocking,
       qol: qolSettings,
-      assets: appearanceAssets
+      assets: appearanceAssets,
+      firstRun: firstRunPending,
+      changelogUpdatesEnabled: changelogUpdates.isEnabled()
     };
   });
 
@@ -741,13 +817,27 @@ app.on("child-process-gone", (_event, details) => {
 });
 
 app.whenReady().then(async () => {
-  storePath = path.join(app.getPath("userData"), "browser-data.json");
-  configureLogger(path.join(app.getPath("userData"), "logs"));
+  const userDataDirectory = app.getPath("userData");
+  storePath = path.join(userDataDirectory, "browser-data.json");
+  const passwordVaultPath = path.join(userDataDirectory, "password-vault.json");
+  firstRunMarkerPath = path.join(userDataDirectory, "first-run-complete");
+  configureLogger(path.join(userDataDirectory, "logs"));
+  changelogUpdates = createChangelogUpdates({
+    statePath: path.join(userDataDirectory, "changelog-settings.json"),
+    changelogPath: path.join(__dirname, "..", "CHANGELOG.md")
+  });
+  firstRunPending = shouldShowFirstRun(firstRunMarkerPath, [
+    storePath,
+    passwordVaultPath
+  ]);
+  if (!firstRunPending && !fs.existsSync(firstRunMarkerPath)) {
+    markFirstRunComplete(firstRunMarkerPath);
+  }
   appearanceAssetDirectory = path.join(app.getPath("userData"), "appearance-assets");
   qolSettings = readStore().qol;
   await updateAppearanceAssets(qolSettings);
   passwordVault = createPasswordVault(
-    path.join(app.getPath("userData"), "password-vault.json"),
+    passwordVaultPath,
     safeStorage
   );
   adFilter = createFilterEngine(

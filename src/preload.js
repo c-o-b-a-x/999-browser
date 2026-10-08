@@ -61,6 +61,11 @@ contextBridge.exposeInMainWorld("quietBrowser", {
   savePassword: (candidate) => ipcRenderer.invoke("password:save", candidate),
   retrievePassword: (request) => ipcRenderer.invoke("password:retrieve", request),
   removePassword: (id) => ipcRenderer.invoke("password:remove", id),
+  completeOnboarding: () => ipcRenderer.invoke("onboarding:complete"),
+  checkChangelogUpdates: () => ipcRenderer.invoke("updates:check-changelog"),
+  markChangelogSeen: (hash) => ipcRenderer.invoke("updates:mark-changelog-seen", hash),
+  setChangelogUpdatesEnabled: (enabled) =>
+    ipcRenderer.invoke("updates:set-changelog-enabled", enabled),
   loadSettings: () => ipcRenderer.invoke("settings:load"),
   saveTheme: (theme) => ipcRenderer.invoke("settings:save-theme", theme),
   saveQolSettings: (settings) => ipcRenderer.invoke("settings:save-qol", settings),

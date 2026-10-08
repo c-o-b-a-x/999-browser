@@ -22,6 +22,11 @@ let currentQolSettings = {
   showSearchBar: true,
   showPrivacyNote: true
 };
+let firstRunRequired = false;
+let onboardingStep = 0;
+let onboardingPasswordConfigured = false;
+let changelogUpdatesEnabled = true;
+let pendingChangelogUpdate = null;
 let interfaceAudioContext = null;
 let themeSaved = false;
 let pendingSaveCandidate = null;
@@ -492,16 +497,120 @@ function renderBookmarksBar(bookmarks) {
 async function initializeSettings() {
   try {
     const settings = await window.quietBrowser.loadSettings();
+    firstRunRequired = settings.firstRun === true;
+    changelogUpdatesEnabled = settings.changelogUpdatesEnabled !== false;
+    document.querySelector("#changelog-updates-setting").checked =
+      changelogUpdatesEnabled;
     currentTheme = window.QuietTheme.mergeTheme(settings.theme);
     applyTheme(currentTheme);
     applyQolSettings(settings.qol, settings.assets);
     const toggle = document.querySelector("#adblock-toggle");
     toggle.setAttribute("aria-pressed", String(settings.adBlocking));
     toggle.textContent = settings.adBlocking ? "On" : "Off";
-    await renderLibrary();
   } catch (error) {
     log("error", "settings.initialize-failed", { error });
     showError(error, "Could not load browser settings");
+  }
+}
+
+const onboardingTitles = [
+  "Your browser, your way",
+  "Tabs and navigation",
+  "Search, history, and bookmarks",
+  "Settings and privacy",
+  "Set up your password manager"
+];
+
+async function prepareOnboarding() {
+  try {
+    const status = await window.quietBrowser.getPasswordManagerStatus();
+    onboardingPasswordConfigured = status.configured;
+  } catch (error) {
+    document.querySelector("#onboarding-status").textContent =
+      `Could not check password manager status: ${error.message}`;
+    log("error", "onboarding.password-status-failed", { error });
+  }
+  document.querySelector("#onboarding-password-form").hidden =
+    onboardingPasswordConfigured;
+  document.querySelector("#onboarding-password-configured").hidden =
+    !onboardingPasswordConfigured;
+  document.querySelector("#onboarding-next").hidden = true;
+  document.querySelector("#onboarding-finish-later").textContent =
+    onboardingPasswordConfigured ? "Finish setup" : "Finish setup later";
+  updateOnboardingStep();
+}
+
+function updateOnboardingStep() {
+  const steps = [...document.querySelectorAll("[data-onboarding-step]")];
+  for (const [index, step] of steps.entries()) {
+    step.hidden = index !== onboardingStep;
+  }
+  const finalStep = onboardingStep === steps.length - 1;
+  document.querySelector("#onboarding-title").textContent =
+    onboardingTitles[onboardingStep];
+  document.querySelector("#onboarding-step-count").textContent =
+    `Step ${onboardingStep + 1} of ${steps.length}`;
+  document.querySelector("#onboarding-progress-fill").style.width =
+    `${((onboardingStep + 1) / steps.length) * 100}%`;
+  document.querySelector("#onboarding-back").hidden = onboardingStep === 0;
+  document.querySelector("#onboarding-next").hidden = finalStep;
+  document.querySelector("#onboarding-finish-later").hidden =
+    !finalStep;
+  document.querySelector("#onboarding-skip").hidden = finalStep;
+}
+
+async function finishOnboarding() {
+  const status = document.querySelector("#onboarding-status");
+  try {
+    await window.quietBrowser.completeOnboarding();
+    document.querySelector("#onboarding-dialog").close();
+    firstRunRequired = false;
+    log("info", "onboarding.finished", {
+      passwordManagerConfigured: onboardingPasswordConfigured
+    });
+    showPendingChangelogUpdate();
+  } catch (error) {
+    status.textContent = `Could not save setup progress: ${error.message}`;
+    log("error", "onboarding.completion-failed", { error });
+  }
+}
+
+function showPendingChangelogUpdate() {
+  if (
+    !pendingChangelogUpdate ||
+    !changelogUpdatesEnabled ||
+    firstRunRequired ||
+    document.querySelector("dialog[open]")
+  ) return;
+  document.querySelector("#changelog-content").textContent =
+    pendingChangelogUpdate.markdown;
+  document.querySelector("#changelog-enabled").checked = true;
+  document.querySelector("#changelog-dialog").showModal();
+}
+
+async function checkForChangelogUpdate() {
+  try {
+    pendingChangelogUpdate = await window.quietBrowser.checkChangelogUpdates();
+    showPendingChangelogUpdate();
+  } catch (error) {
+    log("warn", "updates.changelog-check-failed", { error });
+  }
+}
+
+async function dismissChangelogUpdate() {
+  const dialog = document.querySelector("#changelog-dialog");
+  if (!dialog.open || !pendingChangelogUpdate) return;
+  const enabled = document.querySelector("#changelog-enabled").checked;
+  try {
+    changelogUpdatesEnabled =
+      await window.quietBrowser.setChangelogUpdatesEnabled(enabled);
+    if (enabled) {
+      await window.quietBrowser.markChangelogSeen(pendingChangelogUpdate.hash);
+    }
+    pendingChangelogUpdate = null;
+    dialog.close();
+  } catch (error) {
+    log("error", "updates.changelog-dismiss-failed", { error });
   }
 }
 
@@ -892,6 +1001,76 @@ document.querySelector("#password-manager-setup-form").addEventListener("submit"
   }
 });
 
+document.querySelector("#onboarding-next").addEventListener("click", () => {
+  if (onboardingStep >= onboardingTitles.length - 1) return;
+  onboardingStep += 1;
+  updateOnboardingStep();
+});
+document.querySelector("#onboarding-back").addEventListener("click", () => {
+  if (onboardingStep <= 0) return;
+  onboardingStep -= 1;
+  updateOnboardingStep();
+});
+document.querySelector("#onboarding-skip").addEventListener("click", finishOnboarding);
+document.querySelector("#onboarding-finish-later").addEventListener("click", finishOnboarding);
+document.querySelector("#onboarding-password-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const status = document.querySelector("#onboarding-status");
+  status.textContent = "";
+  try {
+    const result = await window.quietBrowser.setupPasswordManager({
+      masterPassword: document.querySelector("#onboarding-master-password").value,
+      masterPasswordConfirmation: document.querySelector("#onboarding-master-confirm").value,
+      recoveryPin: document.querySelector("#onboarding-recovery-pin").value,
+      recoveryPinConfirmation: document.querySelector("#onboarding-recovery-confirm").value
+    });
+    form.reset();
+    onboardingPasswordConfigured = true;
+    await window.quietBrowser.lockPasswordManager();
+    document.querySelector("#onboarding-password-form").hidden = true;
+    document.querySelector("#onboarding-password-configured").hidden = false;
+    document.querySelector("#onboarding-finish-later").textContent = "Finish setup";
+    document.querySelector("#onboarding-finish-later").hidden = false;
+    document.querySelector("#onboarding-skip").textContent = "Skip tour";
+    status.textContent = result.credentialCount
+      ? `Password manager ready. Migrated ${result.credentialCount} saved password(s).`
+      : "Password manager ready. It will ask for your master password when you open it.";
+    log("info", "onboarding.password-manager-setup", {
+      migratedCredentials: result.credentialCount
+    });
+  } catch (error) {
+    status.textContent = `Could not set up password manager: ${error.message}`;
+    log("error", "onboarding.password-manager-setup-failed", { error });
+  }
+});
+
+document.querySelector("#changelog-close").addEventListener("click", dismissChangelogUpdate);
+document.querySelector("#changelog-dismiss").addEventListener("click", dismissChangelogUpdate);
+document.querySelector("#changelog-dialog").addEventListener("cancel", (event) => {
+  event.preventDefault();
+  dismissChangelogUpdate();
+});
+document.querySelector("#changelog-updates-setting").addEventListener("change", async (event) => {
+  const checkbox = event.currentTarget;
+  checkbox.disabled = true;
+  try {
+    changelogUpdatesEnabled =
+      await window.quietBrowser.setChangelogUpdatesEnabled(checkbox.checked);
+    showToast(
+      changelogUpdatesEnabled
+        ? "Changelog update checks enabled for future launches."
+        : "Changelog update checks disabled.",
+      "success"
+    );
+  } catch (error) {
+    checkbox.checked = changelogUpdatesEnabled;
+    showError(error, "Could not update changelog preference");
+  } finally {
+    checkbox.disabled = false;
+  }
+});
+
 document.querySelector("#password-manager-unlock-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const input = document.querySelector("#master-password-unlock");
@@ -961,6 +1140,9 @@ document.querySelectorAll("dialog").forEach((dialog) => {
   dialog.addEventListener("close", () => {
     if (dialog.id === "password-prompt-dialog") pendingSaveCandidate = null;
     setTimeout(showNextSavePrompt, 0);
+    if (dialog.id !== "changelog-dialog") {
+      setTimeout(showPendingChangelogUpdate, 0);
+    }
   });
 });
 document.querySelector("#password-save-confirm").addEventListener("click", async () => {
@@ -1216,5 +1398,16 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-createTab();
-initializeSettings();
+async function startBrowser() {
+  await initializeSettings();
+  if (firstRunRequired) await prepareOnboarding();
+  createTab();
+  document.body.classList.remove("initializing");
+  if (firstRunRequired) document.querySelector("#onboarding-dialog").showModal();
+  renderLibrary().catch((error) => {
+    showError(error, "Could not load history and bookmarks");
+  });
+  checkForChangelogUpdate();
+}
+
+startBrowser();
